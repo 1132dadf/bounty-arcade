@@ -1,0 +1,30 @@
+name: Shareable replay links
+app: apps/puzzle
+base: 5c76d40
+image: bounty-arcade-dev
+steps:
+  - run: CHECKS=bounties/puzzle-replay-links npm test
+  - agent:
+      model: claude-opus-5-5
+      browser: true
+      max_turns: 40
+      runs: 3
+      pass: 3
+      instruction: |
+        The Sokoban page at /apps/puzzle/ should replay solutions from the URL hash, in the
+        form /apps/puzzle/#level=<index>&moves=<LURD>, where index is the 0-based level in
+        apps/puzzle/levels.json and moves use the game's history letters (u/d/l/r, uppercase
+        for pushes; apps/puzzle/test/logic.test.js lists a solution for every level).
+        logic.js gains replayUrl(levelIndex, state), returning '#level=<i>&moves=<history>',
+        and parseReplay(hash), returning { level, moves } and throwing on a malformed hash
+        (non-numeric level, letters other than udlr).
+        On load with such a hash, the `#level` select shows that level and the moves are
+        replayed: `#moves` shows the replayed count and `#status` contains "Solved" when the
+        replay wins. If a move is blocked, the replay stops there, keeping the moves before
+        it, and `#status` contains the word "blocked".
+        A "Copy link" button `[data-testid=share]` writes the full URL of the current level
+        and moves into the read-only input `#share-url`. Exercise: play some moves with arrow
+        keys, click share, check the input value ends with the expected hash, then open that
+        URL in a new page (a goto that changes only the hash does not reload, and the feature
+        only replays on load) and check the same position and move count; check a link whose
+        third move is blocked shows 2 moves and "blocked".

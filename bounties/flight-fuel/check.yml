@@ -1,0 +1,30 @@
+name: Fuel
+app: apps/flight
+base: 5c76d40
+image: bounty-arcade-dev   # digest pinned later
+steps:
+  - run: CHECKS=bounties/flight-fuel npm test
+  - agent:
+      model: claude-opus-5-5
+      browser: true
+      max_turns: 40
+      runs: 3
+      pass: 3
+      instruction: |
+        Fuel for the flight game (apps/flight). The flight state gains fuel,
+        starting at 1. Each step burns throttle * BURN * dt, with BURN = 1 / 90
+        exported from apps/flight/logic.js (90 s at full throttle), clamped at 0.
+        With fuel at 0 there is no thrust, but the throttle setting is kept, so the
+        plane glides and loses altitude.
+        The page /apps/flight/ shows fuel in the HUD element data-testid="fuel" as a
+        whole percentage like "100%" or "97%". Controls: hold ArrowRight (or D) to
+        raise throttle and ArrowLeft (or A) to lower it; the HUD
+        data-testid="throttle" shows throttle as a percentage. R or the
+        data-testid="restart" button restarts.
+        Exercise it in Chromium: on load fuel reads 100% (or very close); holding
+        ArrowRight for about a second then waiting a few seconds makes the fuel
+        percentage strictly lower; with throttle held at 0% (hold ArrowLeft until
+        the throttle HUD reads 0%) the fuel percentage stops changing; fuel never
+        shows a negative value; restarting resets fuel to 100%. In node, use the
+        logic module to check that the rate matches BURN and that an empty tank
+        removes thrust while keeping the throttle value.

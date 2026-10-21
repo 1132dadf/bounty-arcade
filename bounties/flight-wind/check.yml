@@ -1,0 +1,33 @@
+name: Seeded wind
+app: apps/flight
+base: 5c76d40
+image: bounty-arcade-dev   # digest pinned later
+steps:
+  - run: CHECKS=bounties/flight-wind npm test
+  - agent:
+      model: claude-opus-5-5
+      browser: true
+      max_turns: 40
+      runs: 3
+      pass: 3
+      instruction: |
+        Seeded wind for the flight game (apps/flight). Each level gets a constant
+        horizontal wind: makeLevel(seed) in apps/flight/logic.js returns level.wind,
+        in m/s, positive = tailwind, drawn from the seeded RNG in [-12, 12]. Lift and
+        drag use airspeed (velocity minus wind) while position uses ground velocity,
+        so the same seed always has the same wind, headwind levels move slower over
+        the ground and tailwind levels faster.
+        The page /apps/flight/ shows the wind in the HUD element with
+        data-testid="wind" (id "wind"), as text like "7 m/s" or "-3 m/s", matching
+        /^-?\d+ m\/s$/. The seed is the number input data-testid="seed"; the
+        data-testid="restart" button starts that seed's level.
+        Exercise it in Chromium: load /apps/flight/, check the wind text format,
+        enter several seeds and press Restart, and check the displayed wind changes
+        with the seed, is identical on reloading the same seed, and agrees in sign
+        and (to within 1 m/s) in magnitude with makeLevel(seed).wind imported from
+        the app's logic.js. Find seeds with a strong headwind and a strong tailwind
+        (|wind| > 10) and check that, hands-off for 10 s, the HUD ground speed
+        (data-testid="speed") reads higher on the tailwind seed than on the headwind
+        seed. In node, check via the logic module that starting at trim airspeed
+        (vx = CRUISE + wind) a tailwind level covers more ground, and that
+        hand-built levels without a wind key behave exactly as before.

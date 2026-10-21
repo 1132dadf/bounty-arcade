@@ -1,0 +1,35 @@
+name: Run recording and replay
+app: apps/flight
+base: 5c76d40
+image: bounty-arcade-dev   # digest pinned later
+steps:
+  - run: CHECKS=bounties/flight-replay npm test
+  - agent:
+      model: claude-opus-5-5
+      browser: true
+      max_turns: 40
+      runs: 3
+      pass: 3
+      instruction: |
+        Run recording and replay for the flight game (apps/flight). apps/flight/logic.js
+        exports encodeRun(seed, inputs) and decodeRun(str) -> { seed, inputs }, where
+        inputs is an array of per-step { pitch, throttle } with values in {-1, 0, 1}
+        (one per 1/60 s simulation step). The encoding is URL-safe
+        (/^[A-Za-z0-9_-]+$/) and run-length encodes repeated inputs. It also exports
+        replay(seed, inputs, dt) returning the final state of folding step over the
+        inputs from initialState(makeLevel(seed)).
+        The page /apps/flight/ records the current run. A link with
+        data-testid="share" points at ?run=<encoded run> for the run so far
+        (clicking it navigates there). Opening /apps/flight/?run=<str> sets the seed
+        input (data-testid="seed") to the run's seed and replays its inputs in the
+        game with no key presses. The canvas data-testid="game" has data-status
+        "flying", "crashed" or "finished"; the HUD has data-testid="score", "speed",
+        "altitude" and "throttle".
+        Exercise it in Chromium: build a run with encodeRun imported from the app's
+        logic.js (for example 300 steps of pitch -1 with seed 3, or a throttle-up
+        then dive sequence) and load ?run=<str>; check the seed input shows the
+        run's seed and the game reaches the same status as replay() predicts, with
+        no keyboard input. Then play a short run with the keyboard on some seed
+        until it crashes (arrow keys: Up/Down pitch, Right/Left throttle), note the
+        HUD values, click the share link, and check the replay ends crashed with
+        identical score, speed, altitude and throttle text.

@@ -1,6 +1,6 @@
 // Runs a bounty checker: node check.mjs bounties/<name>/check.yml <candidate.patch>
 import { execSync } from 'node:child_process'
-import { cpSync, mkdtempSync, readFileSync } from 'node:fs'
+import { cpSync, mkdtempSync, readFileSync, symlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { parse } from 'yaml'
@@ -14,7 +14,7 @@ const passes = (cmd, cwd, env) => { try { sh(cmd, cwd, env); return true } catch
 function tree(withPatch) {
   const dir = mkdtempSync(join(tmpdir(), 'bounty-'))
   sh(`git -C ${repo} archive ${check.base} | tar -x -C ${dir}`)
-  cpSync(join(repo, 'node_modules'), join(dir, 'node_modules'), { recursive: true })
+  symlinkSync(join(repo, 'node_modules'), join(dir, 'node_modules'))
   cpSync(join(repo, 'bounties'), join(dir, 'bounties'), { recursive: true })
   if (withPatch) sh(`git apply ${patchFile}`, dir)
   return dir

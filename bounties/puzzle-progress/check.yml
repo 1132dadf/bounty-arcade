@@ -1,0 +1,29 @@
+name: Persist progress and best scores per level
+app: apps/puzzle
+base: 5c76d40
+image: bounty-arcade-dev
+steps:
+  - run: CHECKS=bounties/puzzle-progress npm test
+  - agent:
+      model: claude-opus-5-5
+      browser: true
+      max_turns: 40
+      runs: 3
+      pass: 3
+      instruction: |
+        The Sokoban page at /apps/puzzle/ should remember progress across reloads.
+        logic.js gains recordWin(progress, levelName, moves): a pure function returning a new
+        object keyed by level name, { [levelName]: { best } }, keeping the lower move count
+        and never mutating its argument. ui.js stores that object as JSON in localStorage
+        under the key `puzzle-progress` whenever a level is solved, and restores the last
+        selected level on load.
+        In the page, `#level` is the level select (option values are level indices, labels
+        like "1. First Push"); after a level is solved, its option text shows a check mark
+        `✓` and the best move count, and unsolved levels show no check mark. `#moves` shows
+        the current move count; `#status` contains "Solved" when a level is won. Move with
+        arrow keys or `[data-testid=move-u|d|l|r]`; level 1 is solved by ArrowRight three
+        times, and apps/puzzle/test/logic.test.js lists a solution for every level.
+        Exercise: solve a level, reload and check the label; solve it again with more moves
+        (e.g. a detour) and check the best stays the lower count, and with fewer moves that
+        it drops; check localStorage['puzzle-progress'] parses to the expected object; select
+        a level, reload, and check `#level` keeps that value with `#moves` at 0.

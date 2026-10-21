@@ -1,8 +1,10 @@
 # Puzzle bounties
 
-Each task is independent. A claim is paid when the listed tests, added by the
-requester before the claim opens, pass with `node --test apps/puzzle/test/*.test.js`
-and `npx playwright test apps/puzzle`.
+Each task is independent. Its checker is `bounties/<slug>/check.yml`: the
+exact tests in that folder plus every existing test (`CHECKS=bounties/<slug> npm test`),
+then a judge agent that writes its own browser tests from the instruction without
+seeing the patch. A claim pays when `node check.mjs bounties/<slug>/check.yml <patch>`
+passes in the dev image.
 
 ## 1. Deadlock detection for boxes stuck in corners
 

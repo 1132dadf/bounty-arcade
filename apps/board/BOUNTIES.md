@@ -1,7 +1,10 @@
 # Board bounties
 
-Each task is independent of the others. A requester adds the listed tests at the
-base commit; the bounty pays when `npm test` passes in the dev image with them.
+Each task is independent. Its checker is `bounties/<slug>/check.yml`: the
+exact tests in that folder plus every existing test (`CHECKS=bounties/<slug> npm test`),
+then a judge agent that writes its own browser tests from the instruction without
+seeing the patch. A claim pays when `node check.mjs bounties/<slug>/check.yml <patch>`
+passes in the dev image.
 
 ## 1. Search cards
 
@@ -21,8 +24,9 @@ Acceptance tests:
     `structuredClone` taken before the call.
 - `test/search.spec.js`: add `alpha` and `beta` to To do, type `alp` into
   `[data-testid=search]`; expect one visible `[data-testid=card]` with text
-  `alpha` and the To do heading to contain `1/2`. Clear the box; expect two
-  cards and heading text `2`. Reload; expect the box empty and two cards.
+  `alpha` and the To do heading's count (`h2 span`) to read `1/2`. Clear the
+  box; expect two visible cards and the count `2`. Type `alp` again and
+  reload; expect the box empty and two visible cards.
 
 ## 2. Undo and redo
 
@@ -47,7 +51,9 @@ Acceptance tests:
     `past.length === 0`.
 - `test/history.spec.js`: add a card, move it right, click undo; the card is in
   To do and `[data-testid=redo]` is enabled. Press Control+Shift+Z; the card is
-  in Doing. Reload; `[data-testid=undo]` is disabled and the card is in Doing.
+  in Doing and the board's `data-saved` reaches `4` (undo and redo are stored
+  like any change). Reload; `[data-testid=undo]` is disabled and the card is in
+  Doing.
 
 ## 3. Work-in-progress limit on Doing
 
@@ -63,7 +69,8 @@ Acceptance tests:
 - `test/limits.test.js`:
   - `setLimit stores the limit`: `applyAction(b, { type: 'setLimit', column:
     'doing', limit: 2 }).limits` deep-equals `{ doing: 2 }`; `limit: null`
-    removes it.
+    removes the `limits` key, giving back a board deep-equal to one that never
+    had a limit.
   - `add and move into a full column throw`: with limit 1 and one card in
     Doing, both `{ type: 'add', column: 'doing' }` and a `move` from To do to
     Doing throw `/WIP limit/`; reordering inside Doing still works.
@@ -72,7 +79,10 @@ Acceptance tests:
   - `validate accepts old and new boards`: a board without `limits` passes;
     `limits: { doing: 0 }`, `{ doing: 1.5 }`, `{ todo: 2 }` and a board whose
     Doing already exceeds its limit each throw `/invalid board/`.
+  - `limits survive export and import`: a board with `limits: { doing: 3 }`
+    imported from its JSON deep-equals the original.
 - `test/limits.spec.js`: set `[data-testid=limit-doing]` to `1`, add two cards
   to To do, move the first right; the second card's `[data-action=right]`
-  button is disabled. Reload; the input still shows `1` and the button is still
-  disabled.
+  button is disabled and the board's `data-saved` reaches `4` (setting the limit
+  is stored like any change). Reload; the input still shows `1` and the button
+  is still disabled.

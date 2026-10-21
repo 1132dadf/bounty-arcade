@@ -1,0 +1,28 @@
+name: Deadlock detection for boxes stuck in corners
+app: apps/puzzle
+base: 5c76d40
+image: bounty-arcade-dev
+steps:
+  - run: CHECKS=bounties/puzzle-deadlock npm test
+  - agent:
+      model: claude-opus-5-5
+      browser: true
+      max_turns: 40
+      runs: 3
+      pass: 3
+      instruction: |
+        The Sokoban page at /apps/puzzle/ should warn when a box is deadlocked in a corner.
+        A box is dead when it sits on a non-goal cell with a wall directly above or below it
+        AND a wall directly left or right of it. Boxes on goals are never dead, and a box with
+        walls on only one axis is not dead. logic.js gains deadBoxes(state), returning the
+        sorted cell indices (y * w + x) of dead boxes; it is [] at the start of every level in
+        apps/puzzle/levels.json.
+        In the page, each board cell is a `#board .cell` div in row-major order; dead boxes'
+        cells get the class `dead`, and `#status` shows "Stuck: a box is in a corner" while
+        any box is dead and the level is not solved. Undo (button `[data-testid=undo]`, or the
+        Z key) and Restart (`[data-testid=restart]`) must clear the marking once no box is dead.
+        Choose levels with the `#level` select (option values are level indices) and move with
+        arrow keys or the `[data-testid=move-u|d|l|r]` buttons. Work out move sequences from
+        levels.json that push a box into a non-goal corner in more than one level, check the
+        exact dead cell index and status text, and check cases that must not be marked (box
+        against a single wall, box on a goal in a corner, after undo).

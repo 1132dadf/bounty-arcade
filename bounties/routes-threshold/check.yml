@@ -1,0 +1,29 @@
+name: Routes gain/loss threshold
+app: apps/routes
+base: 5c76d40
+image: bounty-arcade-dev   # digest pinned later
+steps:
+  - run: CHECKS=bounties/routes-threshold npm test
+  - agent:
+      model: claude-opus-5-5
+      browser: true
+      max_turns: 40
+      runs: 3
+      pass: 3
+      instruction: |
+        The routes app (apps/routes/, served at /apps/routes/) is a GPX viewer whose stats panel shows
+        elevation gain in #stat-gain and loss in #stat-loss, formatted like "53 m".
+        The feature: stats(points, { threshold }) in apps/routes/logic.js (metres, default 0, which
+        keeps today's results exactly) applies hysteresis to gain and loss. A climb or descent counts
+        only once elevation has moved at least threshold from the last counted turning point; once a
+        climb is counted, every further rise extends it until elevation falls threshold below the high
+        point, and likewise for descents. Examples: elevations [100, 101, 100, 101, 100] with
+        threshold 2 give gain 0, loss 0; [100, 101, 100, 105, 104, 110] with threshold 2 give gain 10,
+        loss 0; [100, 103, 104, 102] with threshold 2 give gain 4, loss 2.
+        The page gets a numeric input #threshold (data-testid "threshold", initial value 0); changing
+        it recomputes the stats panel for the current route without reloading.
+        Browser check: open /apps/routes/, select "samples/riverside-loop.gpx" with
+        page.getByTestId('sample').selectOption(...), wait for #stat-gain to show "53 m", fill
+        page.getByTestId('threshold') with a positive value such as 1 or 2, and assert #stat-gain and
+        #stat-loss drop below their raw values; setting it back to 0 restores "53 m".
+        Do not test anything beyond this description.

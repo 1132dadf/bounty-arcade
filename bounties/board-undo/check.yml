@@ -1,0 +1,36 @@
+name: Undo and redo
+app: apps/board
+base: 5c76d40
+image: bounty-arcade-dev
+steps:
+  - run: CHECKS=bounties/board-undo npm test
+  - agent:
+      model: claude-opus-5-5
+      browser: true
+      max_turns: 40
+      runs: 3
+      pass: 3
+      instruction: |
+        The Kanban board at /apps/board/ (columns To do, Doing, Done; cards are
+        [data-testid=card] inside [data-testid=column-<todo|doing|done>], with
+        per-card buttons [data-action=left|right|up|down|edit|delete]) gets Undo
+        and Redo buttons, [data-testid=undo] and [data-testid=redo], plus the
+        shortcuts Control+Z (undo) and Control+Shift+Z (redo); Meta works in
+        place of Control. Every board change (add, edit, delete, move, import)
+        can be undone; undo and redo change the stored board, so the result
+        survives reload. History keeps at most 50 past states, is cleared by a
+        successful import ([data-testid=import] file input taking a board JSON),
+        and is not persisted: after reload Undo and Redo are both disabled. A new
+        change after an undo discards the redo states. Each button is disabled
+        when there is nothing to undo or redo, including on a fresh page.
+
+        Exercise it in Playwright: open /apps/board/, wait for
+        [data-testid=board] to have data-ready="true", add cards with
+        [data-testid=new-<column>] and [data-testid=add-<column>], move and
+        delete them with the card buttons, then click undo/redo and press the
+        shortcuts with focus outside the text inputs (page.keyboard.press). Each
+        stored change, undo and redo included, increments data-saved on the
+        board; wait for it before reloading. Check card positions after each
+        step, the enabled/disabled state of both buttons, that a new action
+        after undo disables redo, that import disables undo, and the state
+        after reload.

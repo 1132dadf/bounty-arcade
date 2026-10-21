@@ -1,0 +1,41 @@
+name: Work-in-progress limit on Doing
+app: apps/board
+base: 5c76d40
+image: bounty-arcade-dev
+steps:
+  - run: CHECKS=bounties/board-wip-limit npm test
+  - agent:
+      model: claude-opus-5-5
+      browser: true
+      max_turns: 40
+      runs: 3
+      pass: 3
+      instruction: |
+        The Kanban board at /apps/board/ (columns To do, Doing, Done; cards are
+        [data-testid=card] inside [data-testid=column-<todo|doing|done>], with
+        per-card buttons [data-action=left|right|up|down|edit|delete]) gets a
+        work-in-progress limit on the Doing column, set with the number input
+        [data-testid=limit-doing]; an empty input means no limit, and the limit
+        must be a positive integer. When Doing holds as many cards as its limit,
+        the UI disables every control that would put another card there: the
+        right button on To do cards, the left button on Done cards, and the
+        Doing add input and button ([data-testid=new-doing],
+        [data-testid=add-doing]). Moving cards out of Doing or reordering inside
+        it stays possible. The limit is stored on the board as
+        limits: { doing: n }, survives reload and Export JSON / Import JSON
+        ([data-testid=export], [data-testid=import]), and boards exported
+        without limits still import. The pure reducer applyAction in
+        apps/board/logic.js takes { type: 'setLimit', column: 'doing', limit }
+        (limit null removes it) and throws an error matching /WIP limit/ for any
+        add or move into a full Doing column and for a limit below the current
+        Doing count; validate rejects bad limits with /invalid board/.
+
+        Exercise it in Playwright: open /apps/board/, wait for
+        [data-testid=board] to have data-ready="true", fill the limit input,
+        add cards with [data-testid=new-<column>] and [data-testid=add-<column>],
+        and move them with the card buttons. Each stored change, setting the
+        limit included, increments data-saved on the board; wait for it before
+        reloading. Check which buttons are disabled at and below the limit,
+        after clearing the limit, after moving a card back out, after reload
+        (the input still shows the limit), and after importing a board JSON
+        with and without limits.

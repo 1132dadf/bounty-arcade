@@ -1,0 +1,29 @@
+name: Routes time, moving time and speed
+app: apps/routes
+base: 5c76d40
+image: bounty-arcade-dev   # digest pinned later
+steps:
+  - run: CHECKS=bounties/routes-time npm test
+  - agent:
+      model: claude-opus-5-5
+      browser: true
+      max_turns: 40
+      runs: 3
+      pass: 3
+      instruction: |
+        The routes app (apps/routes/, served at /apps/routes/) is a GPX viewer with a stats panel.
+        The feature: parseGpx in apps/routes/logic.js reads <time> inside each <trkpt> into time
+        (ms since epoch); a point without <time> has no time property. A pure timing(points) returns
+        { elapsed, moving, avgSpeed }: elapsed is last time minus first time in ms, moving sums only
+        intervals whose speed is at least 0.5 m/s, avgSpeed is total haversine distance over moving
+        time in m/s; all three are null if any point lacks a time. formatDuration(ms) gives h:mm:ss
+        (3723000 -> "1:02:03") and "—" for null.
+        The stats panel gains #stat-elapsed and #stat-moving cells (data-testids "stat-elapsed",
+        "stat-moving") showing those durations, or "—" when the route has no times.
+        Browser check: open /apps/routes/; the bundled samples carry no times, so after #stat-distance
+        shows "4.02 km" both cells read "—" (also after selecting "samples/riverside-loop.gpx" via
+        page.getByTestId('sample')). Then upload a timed GPX via page.getByTestId('file').setInputFiles
+        ({ name, mimeType: 'application/gpx+xml', buffer }) whose points move at walking speed or
+        faster for some intervals and stand still for others, and assert the exact h:mm:ss values in
+        both cells. Keep interval speeds well away from 0.5 m/s, and do not test avgSpeed when moving
+        time is 0. Do not test anything beyond this description.

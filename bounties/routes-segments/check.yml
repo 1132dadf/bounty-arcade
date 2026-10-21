@@ -1,0 +1,29 @@
+name: Routes segments and gaps
+app: apps/routes
+base: 5c76d40
+image: bounty-arcade-dev   # digest pinned later
+steps:
+  - run: CHECKS=bounties/routes-segments npm test
+  - agent:
+      model: claude-opus-5-5
+      browser: true
+      max_turns: 40
+      runs: 3
+      pass: 3
+      instruction: |
+        The routes app (apps/routes/, served at /apps/routes/) is a GPX viewer. Today parseGpx in
+        apps/routes/logic.js flattens every <trkpt> into one list, so a track with two <trkseg> blocks
+        counts the straight line across the gap as distance and draws one line across it.
+        The feature: parseGpx(text) also returns segments, an array with one array of points per
+        <trkseg> (points stays the flat list of all points). stats(points, { segments }) sums distance
+        and elevation gain/loss within each segment only; without the option it behaves as today.
+        The map, the SVG #track, draws each segment as its own <polyline>.
+        Browser check: open /apps/routes/, wait for the default sample to load (#stat-distance shows
+        "4.02 km"), then upload a GPX via page.getByTestId('file').setInputFiles({ name, mimeType:
+        'application/gpx+xml', buffer }) holding two <trkseg> blocks far enough apart that the gap
+        matters. Assert #track contains exactly one polyline per segment, and that
+        #stat-distance (formatted like "3.34 km", two decimals) equals the sum of the in-segment
+        haversine distances, not including the jump between segments. The bundled samples have a
+        single segment and must keep one polyline and their current stats.
+        Node checks may cover segment counts and lengths, gap-free distance and gain/loss through
+        stats(points, { segments }). Do not test anything beyond this description.

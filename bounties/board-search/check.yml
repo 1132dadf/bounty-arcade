@@ -1,0 +1,34 @@
+name: Search cards
+app: apps/board
+base: 5c76d40
+image: bounty-arcade-dev
+steps:
+  - run: CHECKS=bounties/board-search npm test
+  - agent:
+      model: claude-opus-5-5
+      browser: true
+      max_turns: 40
+      runs: 3
+      pass: 3
+      instruction: |
+        The Kanban board at /apps/board/ (columns To do, Doing, Done; cards are
+        [data-testid=card] inside [data-testid=column-<todo|doing|done>]) gets a
+        search box, [data-testid=search], above the board. Typing a query hides
+        every card whose text does not contain it, case-insensitively, in all
+        columns; a blank or whitespace-only query shows every card. While a
+        non-blank query is active each column heading's count (the h2 span)
+        reads matching/total, e.g. 1/2; otherwise it shows the plain total.
+        Filtering is view state only: the stored board, the Export JSON
+        download ([data-testid=export]) and the page after reload are unchanged,
+        and the box is empty after reload.
+
+        Exercise it in Playwright: open /apps/board/, wait for
+        [data-testid=board] to have data-ready="true", add cards with
+        [data-testid=new-<column>] and [data-testid=add-<column>] (each change
+        increments data-saved on the board once it is stored), fill the search
+        box, and count visible cards with [data-testid=card]:visible (hidden or
+        removed cards must both count as not shown). Check mixed case, matches
+        across several columns, the counts, clearing the box, that adding,
+        moving or editing cards still works while filtering, that the export
+        still holds every card, and that reload restores an empty box and all
+        cards.
