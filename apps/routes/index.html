@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Routes</title>
+<style>
+  :root { --bg: #f6f5f1; --panel: #fff; --ink: #1f2328; --muted: #6a6f76; --line: #d9d6cf; --track: #d0451b; --fill: #e9a27f55; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #16181b; --panel: #1f2226; --ink: #e8e6e1; --muted: #9aa0a6; --line: #34383d; --track: #ff7a4d; --fill: #ff7a4d33; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, sans-serif; }
+  main { max-width: 60rem; margin: 0 auto; padding: 1rem; display: grid; gap: 1rem; }
+  header { display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; align-items: baseline; }
+  header a { color: var(--muted); }
+  h1 { margin: 0; font-size: 1.4rem; }
+  .controls { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+  select, input { font: inherit; color: inherit; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: .75rem; }
+  .grid { display: grid; gap: 1rem; grid-template-columns: 2fr 1fr; }
+  @media (max-width: 40rem) { .grid { grid-template-columns: 1fr; } }
+  svg { display: block; width: 100%; height: auto; }
+  #track polyline, #profile polyline { fill: none; stroke: var(--track); stroke-width: 2.5; stroke-linejoin: round; }
+  #profile polygon { fill: var(--fill); }
+  .start { fill: #2e8b57; } .end { fill: var(--ink); }
+  .axis { fill: var(--muted); font-size: 11px; }
+  dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: .35rem 1rem; }
+  dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; text-align: right; }
+  #error { color: #c62828; margin: 0; }
+  #error:empty { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1 id="route-name">Routes</h1>
+    <a href="../../">← all apps</a>
+  </header>
+  <div class="controls">
+    <label>Sample <select id="sample" data-testid="sample">
+      <option value="samples/alpine-climb.gpx">Alpine Switchback Climb</option>
+      <option value="samples/riverside-loop.gpx">Riverside Loop</option>
+    </select></label>
+    <label>or open a .gpx <input id="file" data-testid="file" type="file" accept=".gpx,application/gpx+xml"></label>
+  </div>
+  <p id="error" data-testid="error" role="alert"></p>
+  <div class="grid">
+    <div class="card"><svg id="track" data-testid="track" viewBox="0 0 600 400" aria-label="Track map"></svg></div>
+    <div class="card">
+      <dl>
+        <dt>Distance</dt><dd id="stat-distance" data-testid="stat-distance"></dd>
+        <dt>Elevation gain</dt><dd id="stat-gain" data-testid="stat-gain"></dd>
+        <dt>Elevation loss</dt><dd id="stat-loss" data-testid="stat-loss"></dd>
+        <dt>Lowest</dt><dd id="stat-min" data-testid="stat-min"></dd>
+        <dt>Highest</dt><dd id="stat-max" data-testid="stat-max"></dd>
+        <dt>Points</dt><dd id="stat-count" data-testid="stat-count"></dd>
+      </dl>
+    </div>
+  </div>
+  <div class="card"><svg id="profile" data-testid="profile" viewBox="0 0 600 160" aria-label="Elevation profile"></svg></div>
+</main>
+<script type="module" src="ui.js"></script>
+</body>
+</html>

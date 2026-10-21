@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Puzzle</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { --bg: #f4efe6; --fg: #2b2620; --wall: #6b5a48; --floor: #e6dccb; --goal: #c0563f; --box: #c9923b; --done: #5c8f4a; --player: #2f5d8a; }
+  body { font: 16px/1.5 system-ui, sans-serif; background: var(--bg); color: var(--fg); max-width: 40rem; margin: 1.5rem auto; padding: 0 1rem; }
+  header { display: flex; gap: 1rem; align-items: baseline; flex-wrap: wrap; }
+  h1 { margin: 0; font-size: 1.4rem; }
+  .bar { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; margin: 1rem 0; }
+  button, select { font: inherit; padding: .3rem .7rem; border: 1px solid var(--wall); border-radius: 6px; background: #fff; color: inherit; cursor: pointer; }
+  #board { display: grid; gap: 0; width: fit-content; max-width: 100%; margin: 0 auto; touch-action: manipulation; }
+  .cell { width: var(--size); height: var(--size); box-sizing: border-box; position: relative; }
+  .floor, .goal { background: var(--floor); }
+  .wall { background: var(--wall); border-radius: 3px; }
+  .goal::after { content: ''; position: absolute; inset: 35%; border-radius: 50%; background: var(--goal); }
+  .box::before { content: ''; position: absolute; inset: 10%; border-radius: 4px; background: var(--box); border: 2px solid #8a6326; z-index: 1; }
+  .box.goal::before { background: var(--done); border-color: #3d6431; }
+  .player::before { content: ''; position: absolute; inset: 18%; border-radius: 50%; background: var(--player); z-index: 1; }
+  #status { min-height: 1.5em; font-weight: 600; text-align: center; }
+  #pad { display: grid; grid-template-columns: repeat(3, 3rem); grid-template-rows: repeat(2, 3rem); gap: .3rem; justify-content: center; margin-top: 1rem; }
+  #pad button { padding: 0; font-size: 1.2rem; }
+  [data-dir=u] { grid-column: 2; }
+  [data-dir=l] { grid-column: 1; grid-row: 2; }
+  [data-dir=d] { grid-column: 2; grid-row: 2; }
+  [data-dir=r] { grid-column: 3; grid-row: 2; }
+  .hint { font-size: .85rem; opacity: .7; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Puzzle</h1>
+  <a href="../../">&larr; arcade</a>
+</header>
+<div class="bar">
+  <select id="level" data-testid="level" aria-label="Level"></select>
+  <button id="undo" data-testid="undo">Undo</button>
+  <button id="restart" data-testid="restart">Restart</button>
+  <span>Moves <b id="moves" data-testid="moves">0</b></span>
+  <span>Pushes <b id="pushes" data-testid="pushes">0</b></span>
+</div>
+<div id="board" data-testid="board"></div>
+<p id="status" data-testid="status" role="status"></p>
+<div id="pad">
+  <button data-dir="u" data-testid="move-u" aria-label="Up">&uarr;</button>
+  <button data-dir="l" data-testid="move-l" aria-label="Left">&larr;</button>
+  <button data-dir="d" data-testid="move-d" aria-label="Down">&darr;</button>
+  <button data-dir="r" data-testid="move-r" aria-label="Right">&rarr;</button>
+</div>
+<p class="hint">Arrow keys or WASD to move, Z or Backspace to undo, R to restart.</p>
+<script type="module" src="ui.js"></script>
+</body>
+</html>

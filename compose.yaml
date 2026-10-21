@@ -1,0 +1,4 @@
+services:
+  check:
+    build: .
+    command: ["npm", "test"]

@@ -1,0 +1,14 @@
+{
+  "name": "bounty-arcade",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "serve": "node serve.mjs",
+    "test:logic": "node --test apps/*/test/*.test.js",
+    "test:browser": "playwright test",
+    "test": "npm run test:logic && npm run test:browser"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.49.1"
+  }
+}
