@@ -4,11 +4,13 @@
   "type": "module",
   "scripts": {
     "serve": "node serve.mjs",
-    "test:logic": "node --test apps/*/test/*.test.js",
+    "test:logic": "node --test apps/*/test/*.test.js ${CHECKS:+$CHECKS/*.test.js}",
     "test:browser": "playwright test",
-    "test": "npm run test:logic && npm run test:browser"
+    "test": "npm run test:logic && npm run test:browser",
+    "check": "node check.mjs"
   },
   "devDependencies": {
-    "@playwright/test": "1.49.1"
+    "@playwright/test": "1.49.1",
+    "yaml": "2.6.1"
   }
 }
