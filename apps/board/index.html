@@ -34,12 +34,18 @@
   .tools button { padding: .1rem .45rem; font-size: .85rem; }
   form { display: flex; gap: .4rem; }
   form input { flex: 1; min-width: 0; font: inherit; padding: .3rem .5rem; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: inherit; }
+  header input[type="search"], header input[type="number"] { font: inherit; padding: .25rem .5rem; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: inherit; }
+  #search { width: 12rem; }
 </style>
 </head>
 <body>
 <header>
   <h1>Board</h1>
   <a href="../../">All apps</a>
+  <input id="search" data-testid="search" type="search" placeholder="Search cards" aria-label="Search cards">
+  <button id="undo" data-testid="undo" disabled>Undo</button>
+  <button id="redo" data-testid="redo" disabled>Redo</button>
+  <label>Doing limit <input id="limit-doing" data-testid="limit-doing" type="number" min="1" step="1" placeholder="none"></label>
   <button id="export" data-testid="export">Export JSON</button>
   <label class="file">Import JSON<input id="import" data-testid="import" type="file" accept="application/json,.json"></label>
   <p id="status" data-testid="status" role="alert"></p>

@@ -25,6 +25,42 @@ export const moves = state => state.history.length
 export const pushes = state => state.history.filter(m => m === m.toUpperCase()).length
 export const isWon = state => state.boxes.every(b => state.goals.has(b))
 
+// Boxes on a non-goal cell with a wall on a vertical side and a horizontal side
+// can never be pushed again.
+export function deadBoxes(state) {
+  const { w, walls, goals, boxes } = state
+  return boxes
+    .filter(b => !goals.has(b))
+    .filter(b => {
+      const x = b % w
+      const vertical = walls.has(b - w) || walls.has(b + w)
+      const horizontal = (x > 0 && walls.has(b - 1)) || (x < w - 1 && walls.has(b + 1))
+      return vertical && horizontal
+    })
+    .sort((a, b) => a - b)
+}
+
+// Pure best-score bookkeeping: keeps the lowest move count per level name.
+export function recordWin(progress, levelName, moveCount) {
+  const best = progress[levelName]?.best
+  return { ...progress, [levelName]: { best: best === undefined ? moveCount : Math.min(best, moveCount) } }
+}
+
+export function replayUrl(levelIndex, state) {
+  return `#level=${levelIndex}&moves=${state.history.join('')}`
+}
+
+export function parseReplay(hash) {
+  if (typeof hash !== 'string') throw new Error(`bad replay link ${hash}`)
+  const params = new URLSearchParams(hash.replace(/^#/, ''))
+  const level = params.get('level') ?? ''
+  const moves = params.get('moves') ?? ''
+  if (!/^\d+$/.test(level)) throw new Error(`bad replay link ${hash}`)
+  if (!/^[udlr]*$/i.test(moves)) throw new Error(`bad replay link ${hash}`)
+  return { level: Number(level), moves }
+}
+
+
 // Returns the same state object when the move is blocked.
 export function move(state, dir) {
   const d = DIRS[dir]

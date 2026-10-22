@@ -1,4 +1,4 @@
-import { makeLevel, initialState, step, terrainAt } from './logic.js'
+import { makeLevel, initialState, step, terrainAt, encodeRun, decodeRun, replay } from './logic.js'
 
 const DT = 1 / 60
 const VIEW_H = 220
@@ -8,15 +8,21 @@ const keys = new Set()
 const bindings = { ArrowUp: ['pitch', 1], KeyW: ['pitch', 1], ArrowDown: ['pitch', -1], KeyS: ['pitch', -1],
   ArrowRight: ['throttle', 1], KeyD: ['throttle', 1], ArrowLeft: ['throttle', -1], KeyA: ['throttle', -1] }
 let state, acc = 0, last = performance.now()
+let run = []
+let replaying = false
 
 function restart() {
   state = initialState(makeLevel(Number($('seed').value)))
+  run = []
+  replaying = false
   acc = 0
 }
 
 function input() {
   const out = { pitch: 0, throttle: 0 }
   for (const k of keys) out[bindings[k][0]] += bindings[k][1]
+  out.pitch = Math.max(-1, Math.min(1, out.pitch))
+  out.throttle = Math.max(-1, Math.min(1, out.throttle))
   return out
 }
 
@@ -98,6 +104,8 @@ function hud() {
   $('speed').textContent = Math.hypot(state.vx, state.vy).toFixed(0)
   $('altitude').textContent = (state.y - terrainAt(state.level, state.x)).toFixed(0)
   $('throttle').textContent = `${Math.round(state.throttle * 100)}%`
+  $('fuel').textContent = `${Math.round((state.fuel ?? 1) * 100)}%`
+  $('wind').textContent = `${Math.round(state.level.wind ?? 0)} m/s`
   $('status').textContent = state.status
   $('stall').classList.toggle('on', state.stalled)
   canvas.dataset.status = state.status
@@ -106,11 +114,33 @@ function hud() {
 function frame(now) {
   acc += Math.min(now - last, 100) / 1000
   last = now
-  for (; acc >= DT; acc -= DT) state = step(state, input(), DT)
+  for (; acc >= DT; acc -= DT) {
+    const inp = input()
+    if (!replaying) run.push(inp)
+    state = step(state, inp, DT)
+  }
+  if (!replaying) $('share').href = `?run=${encodeRun(state.level.seed, run)}`
   draw()
   hud()
   requestAnimationFrame(frame)
 }
 
-restart()
+// A ?run=<encoded> URL replays the recorded inputs without any key presses.
+const encoded = new URLSearchParams(location.search).get('run')
+let started = false
+if (encoded) {
+  try {
+    const decoded = decodeRun(encoded)
+    $('seed').value = decoded.seed
+    run = decoded.inputs
+    state = replay(decoded.seed, decoded.inputs, DT)
+    replaying = true
+    $('share').href = `?run=${encoded}`
+    started = true
+  } catch (err) {
+    console.error(`bad run: ${err.message}`)
+  }
+}
+if (!started) restart()
+
 requestAnimationFrame(frame)

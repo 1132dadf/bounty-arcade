@@ -7,17 +7,37 @@ const attr = (tag, name) => {
   return Number(m[1])
 }
 
-export function parseGpx(text) {
-  const points = []
-  for (const m of text.matchAll(/<trkpt\b([^>]*?)(?:\/>|>([\s\S]*?)<\/trkpt>)/g)) {
-    const ele = m[2]?.match(/<ele>\s*([^<]+?)\s*<\/ele>/)
-    const p = { lat: attr(m[1], 'lat'), lon: attr(m[1], 'lon'), ele: ele ? Number(ele[1]) : null }
-    if (![p.lat, p.lon].every(Number.isFinite) || (p.ele !== null && !Number.isFinite(p.ele))) throw new Error(`bad trkpt: ${m[0]}`)
-    points.push(p)
+function parsePoint(tag, body) {
+  const ele = body?.match(/<ele>\s*([^<]+?)\s*<\/ele>/)
+  const p = { lat: attr(tag, 'lat'), lon: attr(tag, 'lon'), ele: ele ? Number(ele[1]) : null }
+  const time = body?.match(/<time>\s*([^<]+?)\s*<\/time>/)
+  if (time) {
+    const t = Date.parse(time[1])
+    if (!Number.isFinite(t)) throw new Error(`bad trkpt time: ${time[1]}`)
+    p.time = t
   }
+  if (![p.lat, p.lon].every(Number.isFinite) || (p.ele !== null && !Number.isFinite(p.ele))) throw new Error(`bad trkpt: ${tag}${body ?? ''}`)
+  return p
+}
+
+function parsePoints(text) {
+  return [...text.matchAll(/<trkpt\b([^>]*?)(?:\/>|>([\s\S]*?)<\/trkpt>)/g)].map(m => parsePoint(m[1], m[2]))
+}
+
+export function parseGpx(text) {
+  const segments = []
+  for (const m of text.matchAll(/<trkseg\b[^>]*>([\s\S]*?)<\/trkseg>/g)) {
+    const seg = parsePoints(m[1])
+    if (seg.length) segments.push(seg)
+  }
+  if (!segments.length) {
+    const points = parsePoints(text)
+    if (points.length) segments.push(points)
+  }
+  const points = segments.flat()
   if (!points.length) throw new Error('no <trkpt> elements in GPX')
   const name = text.match(/<trk>[\s\S]*?<name>([^<]*)<\/name>/)?.[1].trim() ?? null
-  return { name, points }
+  return { name, points, segments }
 }
 
 export function haversine(a, b) {
@@ -30,21 +50,63 @@ export function profile(points) {
   return points.map((p, i) => ({ d: d += i ? haversine(points[i - 1], p) : 0, ele: p.ele }))
 }
 
-export function stats(points) {
-  const eles = points.map(p => p.ele).filter(e => e !== null)
+// Hysteresis: a climb or descent is counted once elevation has moved at least
+// `threshold` from the last counted turning point. With threshold 0 this is the
+// raw sum of every rise and fall.
+function gainLoss(eles, threshold) {
   let gain = 0, loss = 0
+  if (!eles.length) return { gain, loss }
+  let ref = eles[0], extreme = eles[0], trend = 0
   for (let i = 1; i < eles.length; i++) {
-    const dz = eles[i] - eles[i - 1]
-    if (dz > 0) gain += dz; else loss -= dz
+    const e = eles[i]
+    if (trend === 0) {
+      if (e > ref && e - ref >= threshold) { gain += e - ref; trend = 1; extreme = ref = e }
+      else if (e < ref && ref - e >= threshold) { loss += ref - e; trend = -1; extreme = ref = e }
+    } else if (trend === 1) {
+      if (e > extreme) { gain += e - extreme; extreme = ref = e }
+      else if (e < extreme && extreme - e >= threshold) { loss += extreme - e; trend = -1; extreme = ref = e }
+    } else {
+      if (e < extreme) { loss += extreme - e; extreme = ref = e }
+      else if (e > extreme && e - extreme >= threshold) { gain += e - extreme; trend = 1; extreme = ref = e }
+    }
   }
+  return { gain, loss }
+}
+
+export function stats(points, { segments = [points], threshold = 0 } = {}) {
+  let distance = 0, gain = 0, loss = 0
+  for (const seg of segments) {
+    for (let i = 1; i < seg.length; i++) distance += haversine(seg[i - 1], seg[i])
+    const gl = gainLoss(seg.map(p => p.ele).filter(e => e !== null), threshold)
+    gain += gl.gain
+    loss += gl.loss
+  }
+  const eles = points.map(p => p.ele).filter(e => e !== null)
   const lats = points.map(p => p.lat), lons = points.map(p => p.lon)
   return {
     count: points.length,
-    distance: profile(points).at(-1).d,
+    distance,
     gain, loss,
     minEle: eles.length ? Math.min(...eles) : null,
     maxEle: eles.length ? Math.max(...eles) : null,
     bbox: { minLat: Math.min(...lats), maxLat: Math.max(...lats), minLon: Math.min(...lons), maxLon: Math.max(...lons) },
+  }
+}
+
+// Elapsed and moving time in ms; moving only counts intervals at >= 0.5 m/s.
+export function timing(points) {
+  if (!points.length || points.some(p => !Number.isFinite(p.time))) return { elapsed: null, moving: null, avgSpeed: null }
+  let distance = 0, moving = 0
+  for (let i = 1; i < points.length; i++) {
+    const dt = points[i].time - points[i - 1].time
+    const d = haversine(points[i - 1], points[i])
+    distance += d
+    if (dt > 0 && d / (dt / 1000) >= 0.5) moving += dt
+  }
+  return {
+    elapsed: points.at(-1).time - points[0].time,
+    moving,
+    avgSpeed: moving > 0 ? distance / (moving / 1000) : null,
   }
 }
 
@@ -68,3 +130,9 @@ export function profileCoords(prof, width, height, pad = 0) {
 
 export const formatKm = m => `${(m / 1000).toFixed(2)} km`
 export const formatM = m => m === null ? '—' : `${Math.round(m)} m`
+export const formatDuration = ms => {
+  if (ms === null || ms === undefined) return '—'
+  const total = Math.round(ms / 1000)
+  const h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), s = total % 60
+  return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+}

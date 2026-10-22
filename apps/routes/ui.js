@@ -1,8 +1,9 @@
-import { parseGpx, stats, profile, project, profileCoords, formatKm, formatM } from './logic.js'
+import { parseGpx, stats, profile, project, profileCoords, formatKm, formatM, timing, formatDuration } from './logic.js'
 
 const $ = id => document.getElementById(id)
 const NS = 'http://www.w3.org/2000/svg'
 const pts = xy => xy.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' ')
+let current = null
 
 function el(name, attrs, text) {
   const e = document.createElementNS(NS, name)
@@ -11,10 +12,16 @@ function el(name, attrs, text) {
   return e
 }
 
-function drawTrack(points) {
+function drawTrack(segments) {
+  const points = segments.flat()
   const xy = project(points, 600, 400, 20)
-  $('track').replaceChildren(
-    el('polyline', { points: pts(xy) }),
+  const lines = []
+  let at = 0
+  for (const seg of segments) {
+    lines.push(el('polyline', { points: pts(xy.slice(at, at + seg.length)) }))
+    at += seg.length
+  }
+  $('track').replaceChildren(...lines,
     el('circle', { class: 'start', cx: xy[0][0], cy: xy[0][1], r: 6 }),
     el('circle', { class: 'end', cx: xy.at(-1)[0], cy: xy.at(-1)[1], r: 4 }),
   )
@@ -33,19 +40,29 @@ function drawProfile(points, s) {
   )
 }
 
-function show(text, label) {
-  $('error').textContent = ''
-  const { name, points } = parseGpx(text)
-  const s = stats(points)
-  $('route-name').textContent = name ?? label
+function renderStats() {
+  const { points, segments } = current
+  const raw = Number($('threshold').value)
+  const threshold = Number.isFinite(raw) && raw > 0 ? raw : 0
+  const s = stats(points, { segments, threshold })
+  const t = timing(points)
   $('stat-distance').textContent = formatKm(s.distance)
   $('stat-gain').textContent = formatM(s.gain)
   $('stat-loss').textContent = formatM(s.loss)
   $('stat-min').textContent = formatM(s.minEle)
   $('stat-max').textContent = formatM(s.maxEle)
   $('stat-count').textContent = s.count
-  drawTrack(points)
+  $('stat-elapsed').textContent = formatDuration(t.elapsed)
+  $('stat-moving').textContent = formatDuration(t.moving)
   drawProfile(points, s)
+}
+
+function show(text, label) {
+  $('error').textContent = ''
+  current = parseGpx(text)
+  $('route-name').textContent = current.name ?? label
+  renderStats()
+  drawTrack(current.segments)
 }
 
 const report = e => { $('error').textContent = e.message; throw e }
@@ -61,4 +78,5 @@ $('file').addEventListener('change', async () => {
   const f = $('file').files[0]
   await f.text().then(t => show(t, f.name.replace(/\.gpx$/i, ''))).catch(report)
 })
+$('threshold').addEventListener('input', () => { if (current) renderStats() })
 loadSample().catch(report)
